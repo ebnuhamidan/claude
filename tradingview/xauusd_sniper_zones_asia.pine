@@ -1,0 +1,113 @@
+//@version=6
+// XAUUSD Sniper Zones - Asia Session
+// Level berdasarkan data 13-14 Oktober 2026 (pra-CPI AS).
+// Semua harga bisa diubah lewat Settings > Inputs tanpa edit kode.
+indicator("XAUUSD Sniper Zones - Asia", overlay = true, max_boxes_count = 50, max_lines_count = 100, max_labels_count = 100)
+
+// ---------- Inputs ----------
+gS = "SELL zone (searah tren)"
+sellTop = input.float(4212.0, "Entry atas", group = gS)
+sellBot = input.float(4203.0, "Entry bawah", group = gS)
+sellSL  = input.float(4222.0, "Stop Loss", group = gS)
+sellTP1 = input.float(4181.0, "TP1", group = gS)
+sellTP2 = input.float(4168.0, "TP2", group = gS)
+sellTP3 = input.float(4152.0, "TP3", group = gS)
+
+gB = "BUY zone (scalp counter-trend)"
+buyTop = input.float(4153.0, "Entry atas", group = gB)
+buyBot = input.float(4147.0, "Entry bawah", group = gB)
+buySL  = input.float(4137.0, "Stop Loss", group = gB)
+buyTP1 = input.float(4168.0, "TP1", group = gB)
+buyTP2 = input.float(4181.0, "TP2", group = gB)
+buyTP3 = input.float(4198.0, "TP3", group = gB)
+
+gD = "BUY deep zone"
+showDeep = input.bool(true, "Tampilkan deep zone", group = gD)
+deepTop  = input.float(4112.0, "Entry atas", group = gD)
+deepBot  = input.float(4106.0, "Entry bawah", group = gD)
+deepSL   = input.float(4094.0, "Stop Loss", group = gD)
+deepTP1  = input.float(4135.0, "TP1", group = gD)
+deepTP2  = input.float(4150.0, "TP2", group = gD)
+
+gK = "Level kunci"
+showKey = input.bool(true, "Tampilkan level kunci", group = gK)
+pivTop  = input.float(4181.0, "Pivot atas", group = gK)
+pivBot  = input.float(4170.0, "Pivot bawah", group = gK)
+r2      = input.float(4217.0, "R2 / invalidasi sell", group = gK)
+r3      = input.float(4252.0, "R3 / SMA100", group = gK)
+s2      = input.float(4106.0, "S2 / support mingguan", group = gK)
+
+gV = "Tampilan"
+lookback = input.int(150, "Mulai gambar dari N bar ke belakang", minval = 10, group = gV)
+showSL   = input.bool(true, "Tampilkan SL & TP", group = gV)
+showAsia = input.bool(true, "Highlight sesi Asia", group = gV)
+asiaSess = input.session("0000-0900", "Jam sesi Asia (UTC)", group = gV)
+
+colSell = color.new(color.red, 0)
+colBuy  = color.new(color.green, 0)
+colDeep = color.new(color.teal, 0)
+colKey  = color.new(color.gray, 0)
+colSL   = color.new(color.orange, 0)
+colTP   = color.new(color.blue, 0)
+
+// ---------- Highlight sesi Asia ----------
+inAsia = timeframe.isintraday and not na(time(timeframe.period, asiaSess, "UTC"))
+bgcolor(showAsia and inAsia ? color.new(color.yellow, 92) : na, title = "Sesi Asia")
+
+// ---------- Drawing ----------
+var array<box>   boxes  = array.new<box>()
+var array<line>  lines  = array.new<line>()
+var array<label> labels = array.new<label>()
+
+fmt(float p) => str.tostring(p, "#.00")
+
+drawZone(float top, float bot, color col, string txt) =>
+    x1 = math.max(0, bar_index - lookback)
+    boxes.push(box.new(x1, top, bar_index, bot, border_color = col, bgcolor = color.new(col, 82), extend = extend.right))
+    labels.push(label.new(bar_index + 3, top, txt + "  " + fmt(bot) + " - " + fmt(top), style = label.style_label_lower_left, color = color.new(col, 20), textcolor = color.white, size = size.small))
+
+drawLevel(float p, color col, string txt, string st) =>
+    x1 = math.max(0, bar_index - lookback)
+    lines.push(line.new(x1, p, bar_index, p, extend = extend.right, color = col, style = st, width = 1))
+    labels.push(label.new(bar_index + 3, p, txt + " " + fmt(p), style = label.style_none, textcolor = col, size = size.small))
+
+if barstate.islast
+    while boxes.size() > 0
+        boxes.pop().delete()
+    while lines.size() > 0
+        lines.pop().delete()
+    while labels.size() > 0
+        labels.pop().delete()
+
+    drawZone(sellTop, sellBot, colSell, "SELL ZONE")
+    drawZone(buyTop, buyBot, colBuy, "BUY ZONE (scalp)")
+
+    if showSL
+        drawLevel(sellSL, colSL, "SL Sell", line.style_dashed)
+        drawLevel(sellTP1, colTP, "Sell TP1", line.style_dotted)
+        drawLevel(sellTP2, colTP, "Sell TP2", line.style_dotted)
+        drawLevel(sellTP3, colTP, "Sell TP3", line.style_dotted)
+        drawLevel(buySL, colSL, "SL Buy", line.style_dashed)
+        drawLevel(buyTP1, colTP, "Buy TP1", line.style_dotted)
+        drawLevel(buyTP2, colTP, "Buy TP2", line.style_dotted)
+        drawLevel(buyTP3, colTP, "Buy TP3", line.style_dotted)
+
+    if showDeep
+        drawZone(deepTop, deepBot, colDeep, "BUY DEEP")
+        if showSL
+            drawLevel(deepSL, colSL, "SL Deep", line.style_dashed)
+            drawLevel(deepTP1, colTP, "Deep TP1", line.style_dotted)
+            drawLevel(deepTP2, colTP, "Deep TP2", line.style_dotted)
+
+    if showKey
+        drawZone(pivTop, pivBot, colKey, "PIVOT")
+        drawLevel(r2, colKey, "R2 / Invalidasi Sell", line.style_solid)
+        drawLevel(r3, colKey, "R3 / SMA100", line.style_solid)
+        drawLevel(s2, colKey, "S2 Mingguan", line.style_solid)
+
+// ---------- Alerts ----------
+alertcondition(high >= sellBot and low <= sellTop, "Masuk SELL zone", "XAUUSD masuk SELL zone - tunggu konfirmasi rejection")
+alertcondition(low <= buyTop and high >= buyBot, "Masuk BUY zone", "XAUUSD masuk BUY zone - tunggu konfirmasi reclaim")
+alertcondition(low <= deepTop and high >= deepBot, "Masuk BUY deep zone", "XAUUSD masuk BUY deep zone")
+alertcondition(close > r2, "Close di atas R2 (sell batal)", "XAUUSD close di atas R2 - setup sell invalid")
+alertcondition(close < buyBot, "Close di bawah BUY zone", "XAUUSD close di bawah BUY zone - fokus ke deep zone")
